@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monitoreo Sensores IoT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Monitoreo Sensores IoT</h1>
+    <table border="1" id="tabla">
+        <thead>
+            <tr>
+                <th>Hora</th><th>CO₂</th><th>Velocidad (km/h)</th><th>Temp (°C)</th><th>dB</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <canvas id="grafica" width="600" height="200"></canvas>
+    <script>
+        async function cargarDatos() {
+            const res = await fetch('/ultimos');
+            const datos = await res.json();
+            const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            let labels = [], co2 = [], velocidad = [], temp = [], db = [];
+            datos.reverse().forEach(row => {
+                let tr = document.createElement('tr');
+                row.forEach(d => {
+                    let td = document.createElement('td');
+                    td.innerText = d;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+                labels.push(row[0].split(' ')[1]);
+                co2.push(row[1]);
+                velocidad.push(row[2]);
+                temp.push(row[3]);
+                db.push(row[4]);
+            });
+            // Gráfica de ejemplo
+            if(window.grafica) window.grafica.destroy();
+            window.grafica = new Chart(document.getElementById('grafica'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {label: 'CO₂', data: co2, yAxisID: 'A'},
+                        {label: 'Velocidad', data: velocidad, yAxisID: 'B'},
+                        {label: 'Temp', data: temp, yAxisID: 'C'},
+                        {label: 'dB', data: db, yAxisID: 'D'}
+                    ]
+                },
+                options: {
+                    scales: {
+                        A: {type: 'linear', position: 'left'},
+                        B: {type: 'linear', position: 'right'},
+                        C: {type: 'linear', position: 'left'},
+                        D: {type: 'linear', position: 'right'}
+                    }
+                }
+            });
+        }
+        setInterval(cargarDatos, 3000);
+        cargarDatos();
+    </script>
+</body>
+</html>
