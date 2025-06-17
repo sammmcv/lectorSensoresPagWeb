@@ -57,13 +57,12 @@ if __name__ == '__main__':
 
 @app.route('/exportar')
 def exportar():
+    import io, csv
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('SELECT * FROM sensores ORDER BY id DESC')
     rows = c.fetchall()
     conn.close()
-    # Exportar como CSV para Excel
-    import io, csv
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['id', 'timestamp', 'co2', 'velocidad', 'temp', 'dB'])
@@ -73,3 +72,4 @@ def exportar():
         'Content-Type': 'text/csv',
         'Content-Disposition': 'attachment; filename=sensores.csv'
     }
+
