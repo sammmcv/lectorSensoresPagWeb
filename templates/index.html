@@ -43,18 +43,18 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        {label: 'CO₂', data: co2, yAxisID: 'A'},
-                        {label: 'Velocidad', data: velocidad, yAxisID: 'B'},
-                        {label: 'Temp', data: temp, yAxisID: 'C'},
-                        {label: 'dB', data: db, yAxisID: 'D'}
+                        {label: 'CO₂', data: co2, borderColor: 'green', yAxisID: 'A'},
+                        {label: 'Velocidad', data: velocidad, borderColor: 'blue', yAxisID: 'B'},
+                        {label: 'Temp', data: temp, borderColor: 'red', yAxisID: 'C'},
+                        {label: 'dB', data: db, borderColor: 'orange', yAxisID: 'D'}
                     ]
                 },
                 options: {
                     scales: {
-                        A: {type: 'linear', position: 'left'},
-                        B: {type: 'linear', position: 'right'},
-                        C: {type: 'linear', position: 'left'},
-                        D: {type: 'linear', position: 'right'}
+                        A: {type: 'linear', position: 'left', min: 390, max: 430},
+                        B: {type: 'linear', position: 'right', min: 0, max: 10},
+                        C: {type: 'linear', position: 'left', min: 20, max: 30},
+                        D: {type: 'linear', position: 'right', min: -90, max: 0}
                     }
                 }
             });
