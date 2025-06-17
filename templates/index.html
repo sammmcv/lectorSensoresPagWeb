@@ -18,6 +18,8 @@
             height: 120px !important;
         }
         h3 { margin-bottom: 6px; }
+        thead th { font-size: 1em; }
+        td, th { text-align: center; }
     </style>
 </head>
 <body>
@@ -56,34 +58,34 @@
             const datos = await res.json();
             const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
             tbody.innerHTML = '';
+
             let labels = [], co2 = [], velocidad = [], temp = [], db = [];
+            let showFake = false;
 
-            datos.reverse().forEach(row => {
-                // Formatea cada valor con 2 decimales si es numérico
-                let tr = document.createElement('tr');
-                row.forEach((d, i) => {
-                    let td = document.createElement('td');
-                    if (i > 0) {
-                        // Solo para columnas numéricas, muestra 2 decimales
-                        td.innerText = (typeof d === "number" || !isNaN(Number(d))) ? Number(d).toFixed(2) : d;
-                    } else {
-                        // Para la hora, pon la hora completa
-                        td.innerText = d;
-                    }
-                    tr.appendChild(td);
+            // Si hay datos reales, pinta tabla y gráficas reales
+            if (datos && datos.length >= 2) {
+                datos.reverse().forEach(row => {
+                    let tr = document.createElement('tr');
+                    // Muestra CO₂, velocidad, temp y dB con más decimales en la tabla
+                    row.forEach((d, i) => {
+                        let td = document.createElement('td');
+                        if (i === 1) td.innerText = Number(d).toFixed(3);         // CO₂ con 3 decimales
+                        else if (i > 1) td.innerText = Number(d).toFixed(2);      // otras columnas con 2 decimales
+                        else td.innerText = d;                                     // hora
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+
+                    // Hora real HH:MM:SS como label en las gráficas
+                    labels.push(row[0].split(' ')[1]);
+                    co2.push(Number(row[1]));
+                    velocidad.push(Number(row[2]));
+                    temp.push(Number(row[3]));
+                    db.push(Number(row[4]));
                 });
-                tbody.appendChild(tr);
-
-                // Hora real HH:MM:SS como label en las gráficas
-                labels.push(row[0].split(' ')[1]);
-                co2.push(Number(row[1]));
-                velocidad.push(Number(row[2]));
-                temp.push(Number(row[3]));
-                db.push(Number(row[4]));
-            });
-
-            // Si NO hay datos reales, muestra datos fake (pero la tabla estará vacía)
-            if (labels.length < 2) {
+            } else {
+                // Datos fake si no hay reales
+                showFake = true;
                 labels = ["t1","t2","t3","t4"];
                 co2 = [400, 405, 410, 402];
                 velocidad = [0, 1, 2, 1];
@@ -91,24 +93,30 @@
                 db = [-80, -40, -60, -30];
             }
 
-            // CO₂
+            // --- Gráfica CO₂ (más precisión) ---
             if (chart_co2) chart_co2.destroy();
             chart_co2 = new Chart(document.getElementById('grafica_co2'), {
                 type: 'line',
-                data: { labels: labels, datasets: [{label: 'CO₂', data: co2, borderColor: 'green', fill: false, pointRadius: 3}] },
+                data: { labels: labels, datasets: [{
+                    label: 'CO₂',
+                    data: co2,
+                    borderColor: 'green',
+                    fill: false,
+                    pointRadius: 3
+                }] },
                 options: {
                     scales: { y: { min: 390, max: 430, title: {display:true,text:"CO₂ (ppm)"}}},
                     plugins: {
                         legend: {display: false},
                         tooltip: {
                             callbacks: {
-                                label: ctx => `CO₂: ${ctx.parsed.y.toFixed(2)} ppm`
+                                label: ctx => `CO₂: ${ctx.parsed.y.toFixed(3)} ppm`  // más precisión aquí
                             }
                         }
                     }
                 }
             });
-            // Velocidad
+            // --- Velocidad ---
             if (chart_vel) chart_vel.destroy();
             chart_vel = new Chart(document.getElementById('grafica_vel'), {
                 type: 'line',
@@ -118,7 +126,7 @@
                     plugins: { legend: {display: false} }
                 }
             });
-            // Temp
+            // --- Temp ---
             if (chart_temp) chart_temp.destroy();
             chart_temp = new Chart(document.getElementById('grafica_temp'), {
                 type: 'line',
@@ -128,7 +136,7 @@
                     plugins: { legend: {display: false} }
                 }
             });
-            // dB
+            // --- dB ---
             if (chart_db) chart_db.destroy();
             chart_db = new Chart(document.getElementById('grafica_db'), {
                 type: 'line',
@@ -138,6 +146,9 @@
                     plugins: { legend: {display: false} }
                 }
             });
+
+            // Si son datos fake, borra la tabla (sólo muestra gráficas de prueba)
+            if (showFake) tbody.innerHTML = '';
         }
         setInterval(cargarDatos, 3000);
         cargarDatos();
