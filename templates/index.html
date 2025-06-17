@@ -57,15 +57,24 @@
             const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
             tbody.innerHTML = '';
             let labels = [], co2 = [], velocidad = [], temp = [], db = [];
+
             datos.reverse().forEach(row => {
+                // Formatea cada valor con 2 decimales si es numérico
                 let tr = document.createElement('tr');
-                row.forEach(d => {
+                row.forEach((d, i) => {
                     let td = document.createElement('td');
-                    td.innerText = d;
+                    if (i > 0) {
+                        // Solo para columnas numéricas, muestra 2 decimales
+                        td.innerText = (typeof d === "number" || !isNaN(Number(d))) ? Number(d).toFixed(2) : d;
+                    } else {
+                        // Para la hora, pon la hora completa
+                        td.innerText = d;
+                    }
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
-                // Usa el tiempo real como label
+
+                // Hora real HH:MM:SS como label en las gráficas
                 labels.push(row[0].split(' ')[1]);
                 co2.push(Number(row[1]));
                 velocidad.push(Number(row[2]));
@@ -89,7 +98,14 @@
                 data: { labels: labels, datasets: [{label: 'CO₂', data: co2, borderColor: 'green', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 390, max: 430, title: {display:true,text:"CO₂ (ppm)"}}},
-                    plugins: { legend: {display: false}}
+                    plugins: {
+                        legend: {display: false},
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `CO₂: ${ctx.parsed.y.toFixed(2)} ppm`
+                            }
+                        }
+                    }
                 }
             });
             // Velocidad
@@ -99,7 +115,7 @@
                 data: { labels: labels, datasets: [{label: 'Velocidad', data: velocidad, borderColor: 'blue', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 0, max: 10, title: {display:true,text:"Velocidad (km/h)"}}},
-                    plugins: { legend: {display: false}}
+                    plugins: { legend: {display: false} }
                 }
             });
             // Temp
@@ -109,7 +125,7 @@
                 data: { labels: labels, datasets: [{label: 'Temp', data: temp, borderColor: 'red', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 10, max: 40, title: {display:true,text:"Temp (°C)"}}},
-                    plugins: { legend: {display: false}}
+                    plugins: { legend: {display: false} }
                 }
             });
             // dB
@@ -119,7 +135,7 @@
                 data: { labels: labels, datasets: [{label: 'dB', data: db, borderColor: 'orange', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: -90, max: 0, title: {display:true,text:"dB"}}},
-                    plugins: { legend: {display: false}}
+                    plugins: { legend: {display: false} }
                 }
             });
         }
