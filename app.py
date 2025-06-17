@@ -55,3 +55,21 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
 
+@app.route('/exportar')
+def exportar():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT * FROM sensores ORDER BY id DESC')
+    rows = c.fetchall()
+    conn.close()
+    # Exportar como CSV para Excel
+    import io, csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['id', 'timestamp', 'co2', 'velocidad', 'temp', 'dB'])
+    writer.writerows(rows)
+    output.seek(0)
+    return output.read(), 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename=sensores.csv'
+    }
