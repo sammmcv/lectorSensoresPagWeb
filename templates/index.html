@@ -31,30 +31,41 @@
                 });
                 tbody.appendChild(tr);
                 labels.push(row[0].split(' ')[1]);
-                co2.push(row[1]);
-                velocidad.push(row[2]);
-                temp.push(row[3]);
-                db.push(row[4]);
+                co2.push(Number(row[1]));
+                velocidad.push(Number(row[2]));
+                temp.push(Number(row[3]));
+                db.push(Number(row[4]));
             });
-            // Gráfica de ejemplo
+
+
+            // Debug: muestra arrays en consola
+            // console.log("labels", labels);
+            // console.log("velocidad", velocidad);
+
             if(window.grafica) window.grafica.destroy();
             window.grafica = new Chart(document.getElementById('grafica'), {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
-                        {label: 'CO₂', data: co2, borderColor: 'green', yAxisID: 'A'},
-                        {label: 'Velocidad', data: velocidad, borderColor: 'blue', yAxisID: 'B'},
-                        {label: 'Temp', data: temp, borderColor: 'red', yAxisID: 'C'},
-                        {label: 'dB', data: db, borderColor: 'orange', yAxisID: 'D'}
+                        {label: 'CO₂', data: co2, borderColor: 'green', yAxisID: 'A', fill: false},
+                        {label: 'Velocidad', data: velocidad, borderColor: 'blue', yAxisID: 'B', fill: false},
+                        {label: 'Temp', data: temp, borderColor: 'red', yAxisID: 'C', fill: false},
+                        {label: 'dB', data: db, borderColor: 'orange', yAxisID: 'D', fill: false}
                     ]
                 },
                 options: {
+                    responsive: true,
                     scales: {
-                        A: {type: 'linear', position: 'left', min: 390, max: 430},
-                        B: {type: 'linear', position: 'right', min: 0, max: 10},
-                        C: {type: 'linear', position: 'left', min: 20, max: 30},
-                        D: {type: 'linear', position: 'right', min: -90, max: 0}
+                        A: {type: 'linear', position: 'left', min: 390, max: 430, title: {display: true, text: "CO₂ (ppm)"}},
+                        B: {type: 'linear', position: 'right', min: 0, max: 10, title: {display: true, text: "Velocidad (km/h)"}, grid: {drawOnChartArea: false}},
+                        C: {type: 'linear', position: 'left', min: 20, max: 30, title: {display: true, text: "Temp (°C)"}, grid: {drawOnChartArea: false}},
+                        D: {type: 'linear', position: 'right', min: -90, max: 0, title: {display: true, text: "dB"}, grid: {drawOnChartArea: false}}
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
                     }
                 }
             });
