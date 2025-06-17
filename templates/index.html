@@ -3,6 +3,9 @@
 <head>
     <title>Monitoreo Sensores IoT</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container { margin-bottom: 40px; }
+    </style>
 </head>
 <body>
     <h1>Monitoreo Sensores IoT</h1>
@@ -14,8 +17,27 @@
         </thead>
         <tbody></tbody>
     </table>
-    <canvas id="grafica" width="600" height="200"></canvas>
+
+    <div class="chart-container">
+        <h3>CO₂ (ppm)</h3>
+        <canvas id="grafica_co2" width="600" height="200"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Velocidad (km/h)</h3>
+        <canvas id="grafica_vel" width="600" height="200"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Temperatura (°C)</h3>
+        <canvas id="grafica_temp" width="600" height="200"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>dB</h3>
+        <canvas id="grafica_db" width="600" height="200"></canvas>
+    </div>
+
     <script>
+        let chart_co2, chart_vel, chart_temp, chart_db;
+
         async function cargarDatos() {
             const res = await fetch('/ultimos');
             const datos = await res.json();
@@ -37,39 +59,57 @@
                 db.push(Number(row[4]));
             });
 
+            // Datos de prueba si hay menos de 2 reales
+            if (labels.length < 2) {
+                labels = ["t1","t2","t3","t4"];
+                co2 = [400, 405, 410, 402];
+                velocidad = [0, 1, 2, 1];
+                temp = [21.9, 22.5, 23, 22.8];
+                db = [-80, -40, -60, -30];
+            }
 
-            // Debug: muestra arrays en consola
-            // console.log("labels", labels);
-            // console.log("velocidad", velocidad);
-
-            if(window.grafica) window.grafica.destroy();
-            window.grafica = new Chart(document.getElementById('grafica'), {
+            // CO2
+            if (chart_co2) chart_co2.destroy();
+            chart_co2 = new Chart(document.getElementById('grafica_co2'), {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {label: 'CO₂', data: co2, borderColor: 'green', yAxisID: 'A', fill: false},
-                        {label: 'Velocidad', data: velocidad, borderColor: 'blue', yAxisID: 'B', fill: false},
-                        {label: 'Temp', data: temp, borderColor: 'red', yAxisID: 'C', fill: false},
-                        {label: 'dB', data: db, borderColor: 'orange', yAxisID: 'D', fill: false}
-                    ]
-                },
+                data: { labels: labels, datasets: [{label: 'CO₂', data: co2, borderColor: 'green', fill: false}] },
                 options: {
-                    responsive: true,
-                    scales: {
-                        A: {type: 'linear', position: 'left', min: 390, max: 430, title: {display: true, text: "CO₂ (ppm)"}},
-                        B: {type: 'linear', position: 'right', min: 0, max: 10, title: {display: true, text: "Velocidad (km/h)"}, grid: {drawOnChartArea: false}},
-                        C: {type: 'linear', position: 'left', min: 20, max: 30, title: {display: true, text: "Temp (°C)"}, grid: {drawOnChartArea: false}},
-                        D: {type: 'linear', position: 'right', min: -90, max: 0, title: {display: true, text: "dB"}, grid: {drawOnChartArea: false}}
-                    },
-                    plugins: {
-                        legend: {
-                            display: true
-                        }
-                    }
+                    scales: { y: { min: 390, max: 430, title: {display:true,text:"CO₂ (ppm)"}}},
+                    plugins: { legend: {display: false}}
+                }
+            });
+            // Velocidad
+            if (chart_vel) chart_vel.destroy();
+            chart_vel = new Chart(document.getElementById('grafica_vel'), {
+                type: 'line',
+                data: { labels: labels, datasets: [{label: 'Velocidad', data: velocidad, borderColor: 'blue', fill: false}] },
+                options: {
+                    scales: { y: { min: 0, max: 10, title: {display:true,text:"Velocidad (km/h)"}}},
+                    plugins: { legend: {display: false}}
+                }
+            });
+            // Temperatura
+            if (chart_temp) chart_temp.destroy();
+            chart_temp = new Chart(document.getElementById('grafica_temp'), {
+                type: 'line',
+                data: { labels: labels, datasets: [{label: 'Temp', data: temp, borderColor: 'red', fill: false}] },
+                options: {
+                    scales: { y: { min: 10, max: 40, title: {display:true,text:"Temp (°C)"}}},
+                    plugins: { legend: {display: false}}
+                }
+            });
+            // dB
+            if (chart_db) chart_db.destroy();
+            chart_db = new Chart(document.getElementById('grafica_db'), {
+                type: 'line',
+                data: { labels: labels, datasets: [{label: 'dB', data: db, borderColor: 'orange', fill: false}] },
+                options: {
+                    scales: { y: { min: -90, max: 0, title: {display:true,text:"dB"}}},
+                    plugins: { legend: {display: false}}
                 }
             });
         }
+
         setInterval(cargarDatos, 3000);
         cargarDatos();
     </script>
