@@ -63,6 +63,16 @@ def exportar():
         'Content-Disposition': 'attachment; filename=sensores.csv'
     }
 
+@app.route('/borrar', methods=['POST'])
+def borrar():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('DELETE FROM sensores')
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "tabla sensores vaciada"})
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
