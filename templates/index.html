@@ -4,7 +4,20 @@
     <title>Monitoreo Sensores IoT</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .chart-container { margin-bottom: 40px; }
+        body { font-family: Arial, sans-serif; }
+        table { margin-bottom: 30px; }
+        .chart-container {
+            margin-bottom: 24px;
+            width: 350px;
+            height: 160px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        canvas {
+            width: 320px !important;
+            height: 120px !important;
+        }
+        h3 { margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -20,19 +33,19 @@
 
     <div class="chart-container">
         <h3>CO₂ (ppm)</h3>
-        <canvas id="grafica_co2" width="600" height="200"></canvas>
+        <canvas id="grafica_co2"></canvas>
     </div>
     <div class="chart-container">
         <h3>Velocidad (km/h)</h3>
-        <canvas id="grafica_vel" width="600" height="200"></canvas>
+        <canvas id="grafica_vel"></canvas>
     </div>
     <div class="chart-container">
-        <h3>Temperatura (°C)</h3>
-        <canvas id="grafica_temp" width="600" height="200"></canvas>
+        <h3>Temp (°C)</h3>
+        <canvas id="grafica_temp"></canvas>
     </div>
     <div class="chart-container">
         <h3>dB</h3>
-        <canvas id="grafica_db" width="600" height="200"></canvas>
+        <canvas id="grafica_db"></canvas>
     </div>
 
     <script>
@@ -52,6 +65,7 @@
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
+                // Usa el tiempo real como label
                 labels.push(row[0].split(' ')[1]);
                 co2.push(Number(row[1]));
                 velocidad.push(Number(row[2]));
@@ -59,7 +73,7 @@
                 db.push(Number(row[4]));
             });
 
-            // Datos de prueba si hay menos de 2 reales
+            // Si NO hay datos reales, muestra datos fake (pero la tabla estará vacía)
             if (labels.length < 2) {
                 labels = ["t1","t2","t3","t4"];
                 co2 = [400, 405, 410, 402];
@@ -68,11 +82,11 @@
                 db = [-80, -40, -60, -30];
             }
 
-            // CO2
+            // CO₂
             if (chart_co2) chart_co2.destroy();
             chart_co2 = new Chart(document.getElementById('grafica_co2'), {
                 type: 'line',
-                data: { labels: labels, datasets: [{label: 'CO₂', data: co2, borderColor: 'green', fill: false}] },
+                data: { labels: labels, datasets: [{label: 'CO₂', data: co2, borderColor: 'green', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 390, max: 430, title: {display:true,text:"CO₂ (ppm)"}}},
                     plugins: { legend: {display: false}}
@@ -82,17 +96,17 @@
             if (chart_vel) chart_vel.destroy();
             chart_vel = new Chart(document.getElementById('grafica_vel'), {
                 type: 'line',
-                data: { labels: labels, datasets: [{label: 'Velocidad', data: velocidad, borderColor: 'blue', fill: false}] },
+                data: { labels: labels, datasets: [{label: 'Velocidad', data: velocidad, borderColor: 'blue', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 0, max: 10, title: {display:true,text:"Velocidad (km/h)"}}},
                     plugins: { legend: {display: false}}
                 }
             });
-            // Temperatura
+            // Temp
             if (chart_temp) chart_temp.destroy();
             chart_temp = new Chart(document.getElementById('grafica_temp'), {
                 type: 'line',
-                data: { labels: labels, datasets: [{label: 'Temp', data: temp, borderColor: 'red', fill: false}] },
+                data: { labels: labels, datasets: [{label: 'Temp', data: temp, borderColor: 'red', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: 10, max: 40, title: {display:true,text:"Temp (°C)"}}},
                     plugins: { legend: {display: false}}
@@ -102,14 +116,13 @@
             if (chart_db) chart_db.destroy();
             chart_db = new Chart(document.getElementById('grafica_db'), {
                 type: 'line',
-                data: { labels: labels, datasets: [{label: 'dB', data: db, borderColor: 'orange', fill: false}] },
+                data: { labels: labels, datasets: [{label: 'dB', data: db, borderColor: 'orange', fill: false, pointRadius: 3}] },
                 options: {
                     scales: { y: { min: -90, max: 0, title: {display:true,text:"dB"}}},
                     plugins: { legend: {display: false}}
                 }
             });
         }
-
         setInterval(cargarDatos, 3000);
         cargarDatos();
     </script>
