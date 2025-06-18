@@ -199,17 +199,11 @@
         let rangosVel = { min: 0, max: 10, estable: 0 };
         let rangosDB = { min: 20, max: 50, estable: 0 };
 
-        // Función para convertir UTC a hora de CDMX
-        function convertirAHoraCDMX(timestampUTC) {
-            const fecha = new Date(timestampUTC + ' UTC');
-            const options = {
-                timeZone: 'America/Mexico_City',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            };
-            return fecha.toLocaleString('es-MX', options);
+        // Función simplificada para extraer solo la hora (ya viene en CDMX)
+        function extraerHora(timestampCDMX) {
+            // El timestamp ya viene en formato "2025-06-18 07:57:24" en hora CDMX
+            // Solo extraer la parte de la hora HH:MM:SS
+            return timestampCDMX.split(' ')[1];
         }
 
         // Función mejorada para calcular rango adaptativo con contracción gradual
@@ -324,7 +318,9 @@
                 // Actualizar indicador de conexión
                 document.getElementById('connection-status').textContent = 'Conectado';
                 document.getElementById('status-indicator').className = 'status-indicator online';
-                document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-MX');
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-MX', {
+                    timeZone: 'America/Mexico_City'
+                });
 
                 const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
                 tbody.innerHTML = '';
@@ -346,13 +342,11 @@
                     datos.slice(0, 15).reverse().forEach(row => {
                         let tr = document.createElement('tr');
                         
-                        // Convertir la hora a CDMX (solo HH:MM:SS)
-                        const horaCDMX = convertirAHoraCDMX(row[0]);
-                        
                         row.forEach((d, i) => {
                             let td = document.createElement('td');
                             if (i === 0) {
-                                td.innerText = horaCDMX;
+                                // Ya viene en hora CDMX, solo extraer HH:MM:SS
+                                td.innerText = extraerHora(d);
                             } else {
                                 const valor = Number(d);
                                 if (i === 1) {
@@ -376,8 +370,8 @@
 
                     // Preparar datos para gráficas (últimos 10 puntos)
                     datos.slice(0, 10).reverse().forEach(row => {
-                        const horaCDMX = convertirAHoraCDMX(row[0]);
-                        labels.push(horaCDMX);
+                        const horaFormateada = extraerHora(row[0]);
+                        labels.push(horaFormateada);
                         co2.push(Number(row[1]));
                         velocidad.push(Number(row[2]));
                         temp.push(Number(row[3]));
@@ -394,7 +388,7 @@
                     // Datos fake si no hay reales
                     document.getElementById('statsContainer').style.display = 'none';
                     showFake = true;
-                    labels = ["12:00","12:01","12:02","12:03"];
+                    labels = ["12:00:00","12:01:00","12:02:00","12:03:00"];
                     co2 = [400, 405, 410, 402];
                     velocidad = [0, 1, 2, 1];
                     temp = [21.9, 22.5, 23, 22.8];
