@@ -199,11 +199,19 @@
         let rangosVel = { min: 0, max: 10, estable: 0 };
         let rangosDB = { min: 20, max: 50, estable: 0 };
 
-        // Función simplificada para extraer solo la hora (ya viene en CDMX)
+        // Función corregida para extraer solo la hora (ya viene en CDMX)
         function extraerHora(timestampCDMX) {
             // El timestamp ya viene en formato "2025-06-18 07:57:24" en hora CDMX
             // Solo extraer la parte de la hora HH:MM:SS
-            return timestampCDMX.split(' ')[1];
+            if (typeof timestampCDMX === 'string' && timestampCDMX.includes(' ')) {
+                return timestampCDMX.split(' ')[1];
+            }
+            // Si por alguna razón viene en otro formato, convertir
+            const fecha = new Date(timestampCDMX);
+            return fecha.toLocaleTimeString('es-MX', {
+                hour12: false,
+                timeZone: 'America/Mexico_City'
+            });
         }
 
         // Función mejorada para calcular rango adaptativo con contracción gradual
@@ -318,6 +326,8 @@
                 // Actualizar indicador de conexión
                 document.getElementById('connection-status').textContent = 'Conectado';
                 document.getElementById('status-indicator').className = 'status-indicator online';
+                
+                // Esta parte está bien - usa la hora local del navegador
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-MX', {
                     timeZone: 'America/Mexico_City'
                 });
@@ -345,7 +355,8 @@
                         row.forEach((d, i) => {
                             let td = document.createElement('td');
                             if (i === 0) {
-                                // Ya viene en hora CDMX, solo extraer HH:MM:SS
+                                // Debug: mostrar el timestamp tal como viene
+                                console.log('Timestamp recibido:', d);
                                 td.innerText = extraerHora(d);
                             } else {
                                 const valor = Number(d);
