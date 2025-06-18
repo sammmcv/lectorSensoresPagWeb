@@ -129,7 +129,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🌡️ Monitoreo Sensores IoT 📊</h1>
+        <h1>Monitoreo Sensores Sistemas en Chip</h1>
         <span id="connection-status">Conectando...</span>
         <span id="status-indicator" class="status-indicator offline"></span>
     </div>
@@ -165,7 +165,7 @@
         <table id="tabla">
             <thead>
                 <tr>
-                    <th>🕐 Hora</th><th>🌱 CO₂</th><th>🚗 Vel</th><th>🌡️ Temp</th><th>🔊 dB</th>
+                    <th>Hora</th><th>CO₂</th><th>Vel</th><th>Temp</th><th>dB</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -194,11 +194,11 @@
         let autoRefresh = true;
         let refreshInterval;
 
-        // Variables para rangos adaptativos
-        let rangosCO2 = { min: 390, max: 430 };
-        let rangosTemp = { min: 5, max: 25 };
-        let rangosVel = { min: 0, max: 10 };
-        let rangosDB = { min: 20, max: 85 };
+        // Variables para rangos adaptativos con memoria de estabilidad
+        let rangosCO2 = { min: 390, max: 430, estable: 0 };
+        let rangosTemp = { min: 5, max: 25, estable: 0 };
+        let rangosVel = { min: 0, max: 10, estable: 0 };
+        let rangosDB = { min: 20, max: 85, estable: 0 };
 
         // Función para convertir UTC a hora de CDMX
         function convertirAHoraCDMX(timestampUTC) {
@@ -213,22 +213,62 @@
             return fecha.toLocaleString('es-MX', options);
         }
 
-        // Función para calcular rango adaptativo
+        // Función mejorada para calcular rango adaptativo con contracción gradual
         function calcularRangoAdaptativo(datos, rangoActual, margenPorcentaje = 0.15) {
             if (!datos || datos.length === 0) return rangoActual;
             
             const min = Math.min(...datos);
             const max = Math.max(...datos);
             const rango = max - min;
-            const margen = Math.max(rango * margenPorcentaje, 2); // Margen mínimo de 2 unidades
+            
+            // Calcular margen mínimo basado en el tipo de sensor
+            let margenMinimo = 2;
+            if (rangoActual === rangosCO2) margenMinimo = 5;      // CO2 necesita más rango
+            else if (rangoActual === rangosTemp) margenMinimo = 2; // Temperatura
+            else if (rangoActual === rangosVel) margenMinimo = 1;  // Velocidad
+            else if (rangoActual === rangosDB) margenMinimo = 5;   // dB
+            
+            const margen = Math.max(rango * margenPorcentaje, margenMinimo);
             
             const nuevoMin = min - margen;
             const nuevoMax = max + margen;
             
-            // Solo expandir el rango, nunca contraer bruscamente
+            // Verificar si los datos están estables (variación pequeña)
+            const variacionActual = rango;
+            const rangoActualTotal = rangoActual.max - rangoActual.min;
+            const esEstable = variacionActual < (rangoActualTotal * 0.1); // Si la variación es menor al 10% del rango actual
+            
+            if (esEstable) {
+                rangoActual.estable++;
+            } else {
+                rangoActual.estable = 0; // Resetear contador si hay variación
+            }
+            
+            let finalMin, finalMax;
+            
+            // Si los datos han sido estables por varios ciclos, contraer gradualmente
+            if (rangoActual.estable > 3) { // Después de 3 ciclos estables
+                const factorContraccion = 0.9; // Contraer 10% cada vez
+                const rangoIdeal = (nuevoMax - nuevoMin);
+                const rangoActualSpan = rangoActualTotal;
+                
+                if (rangoActualSpan > rangoIdeal * 1.5) { // Solo contraer si el rango actual es 50% mayor al ideal
+                    finalMin = rangoActual.min * factorContraccion + nuevoMin * (1 - factorContraccion);
+                    finalMax = rangoActual.max * factorContraccion + nuevoMax * (1 - factorContraccion);
+                } else {
+                    finalMin = rangoActual.min;
+                    finalMax = rangoActual.max;
+                }
+            } else {
+                // Comportamiento normal: solo expandir cuando sea necesario
+                finalMin = Math.min(rangoActual.min, nuevoMin);
+                finalMax = Math.max(rangoActual.max, nuevoMax);
+            }
+            
             return {
-                min: Math.min(rangoActual.min, nuevoMin),
-                max: Math.max(rangoActual.max, nuevoMax)
+                min: finalMin,
+                max: finalMax,
+                estable: rangoActual.estable
             };
         }
 
@@ -277,19 +317,19 @@
             window.open('/exportar', '_blank');
         }
 
-        async function borrarDatos() {
-            if (confirm('¿Estás seguro de que quieres borrar todos los datos?')) {
-                const response = await fetch('/borrar', { method: 'POST' });
-                const result = await response.json();
-                alert(result.status);
-                // Resetear rangos al borrar datos
-                rangosCO2 = { min: 390, max: 430 };
-                rangosTemp = { min: 5, max: 25 };
-                rangosVel = { min: 0, max: 10 };
-                rangosDB = { min: 20, max: 85 };
-                cargarDatos();
-            }
-        }
+        // async function borrarDatos() {
+        //     if (confirm('¿Estás seguro de que quieres borrar todos los datos?')) {
+        //         const response = await fetch('/borrar', { method: 'POST' });
+        //         const result = await response.json();
+        //         alert(result.status);
+        //         // Resetear rangos al borrar datos
+        //         rangosCO2 = { min: 390, max: 430 };
+        //         rangosTemp = { min: 5, max: 25 };
+        //         rangosVel = { min: 0, max: 10 };
+        //         rangosDB = { min: 20, max: 85 };
+        //         cargarDatos();
+        //     }
+        // }
 
         async function cargarDatos() {
             try {
@@ -359,7 +399,7 @@
                         db.push(Number(row[4]));
                     });
 
-                    // Calcular rangos adaptativos
+                    // Calcular rangos adaptativos con contracción gradual
                     rangosCO2 = calcularRangoAdaptativo(co2, rangosCO2);
                     rangosTemp = calcularRangoAdaptativo(temp, rangosTemp);
                     rangosVel = calcularRangoAdaptativo(velocidad, rangosVel);
