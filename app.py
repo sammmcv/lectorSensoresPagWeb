@@ -2,10 +2,16 @@ from flask import Flask, request, jsonify, render_template
 import sqlite3
 import os
 from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 
 DB_FILE = 'datos_sensores.db'
+
+def get_cdmx_time():
+    """Obtiene la hora actual de CDMX en formato string"""
+    cdmx_tz = pytz.timezone('America/Mexico_City')
+    return datetime.now(cdmx_tz).strftime('%Y-%m-%d %H:%M:%S')
 
 def init_db():
     if not os.path.isfile(DB_FILE):
@@ -14,7 +20,7 @@ def init_db():
         c.execute('''
         CREATE TABLE IF NOT EXISTS sensores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            timestamp TEXT,
             co2 REAL, velocidad REAL, temp REAL, dB REAL
         )''')
         conn.commit()
@@ -32,15 +38,18 @@ def recibir_datos():
     if None in [co2, velocidad, temp, dB]:
         return jsonify({"status": "error", "message": "Datos incompletos"}), 400
     
+    # Obtener hora de CDMX
+    timestamp_cdmx = get_cdmx_time()
+    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO sensores (co2, velocidad, temp, dB)
-        VALUES (?, ?, ?, ?)
-    ''', (co2, velocidad, temp, dB))
+        INSERT INTO sensores (timestamp, co2, velocidad, temp, dB)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (timestamp_cdmx, co2, velocidad, temp, dB))
     conn.commit()
     conn.close()
-    return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
+    return jsonify({"status": "ok", "timestamp": timestamp_cdmx})
 
 @app.route('/ultimos')
 def ultimos():
@@ -61,12 +70,12 @@ def exportar():
     conn.close()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['id', 'timestamp', 'co2', 'velocidad', 'temp', 'dB'])
+    writer.writerow(['id', 'timestamp_cdmx', 'co2', 'velocidad', 'temp', 'dB'])
     writer.writerows(rows)
     output.seek(0)
     return output.read(), 200, {
         'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename=sensores.csv'
+        'Content-Disposition': 'attachment; filename=sensores_cdmx.csv'
     }
 
 @app.route('/borrar', methods=['POST'])
@@ -82,6 +91,7 @@ def borrar():
 def estadisticas():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
+    # Ahora podemos usar comparaciones de texto ya que están en formato consistente
     c.execute('''
         SELECT 
             COUNT(*) as total,
@@ -95,7 +105,7 @@ def estadisticas():
             MIN(dB) as db_min,
             MAX(dB) as db_max
         FROM sensores 
-        WHERE timestamp >= datetime('now', '-24 hours')
+        WHERE timestamp >= datetime('now', '-24 hours', 'localtime')
     ''')
     stats = c.fetchone()
     conn.close()
