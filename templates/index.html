@@ -137,7 +137,7 @@
     <div class="controls">
         <button onclick="toggleAutoRefresh()" id="refreshBtn">⏸️ Pausar</button>
         <button onclick="exportarDatos()">📥 Exportar CSV</button>
-        <button onclick="borrarDatos()" class="danger">🗑️ Borrar Datos</button>
+        <!--> <button onclick="borrarDatos()" class="danger">🗑️ Borrar Datos</button> <-->
         <span style="margin-left: 20px;">Última actualización: <span id="lastUpdate">-</span></span>
     </div>
 
@@ -195,10 +195,10 @@
         let refreshInterval;
 
         // Variables para rangos adaptativos con memoria de estabilidad
-        let rangosCO2 = { min: 390, max: 430, estable: 0 };
+        let rangosCO2 = { min: 390, max: 410, estable: 0 };
         let rangosTemp = { min: 5, max: 25, estable: 0 };
         let rangosVel = { min: 0, max: 10, estable: 0 };
-        let rangosDB = { min: 20, max: 85, estable: 0 };
+        let rangosDB = { min: 20, max: 50, estable: 0 };
 
         // Función para convertir UTC a hora de CDMX
         function convertirAHoraCDMX(timestampUTC) {
