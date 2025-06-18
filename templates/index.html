@@ -51,23 +51,34 @@
         .controls button:hover { background: #45a049; }
         .controls button.danger { background: #f44336; }
         .controls button.danger:hover { background: #da190b; }
-        table { 
-            margin-bottom: 30px; 
+        
+        /* Tabla más compacta */
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
             background: white;
             border-radius: 10px;
-            overflow: hidden;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        table { 
             width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
         }
         table th {
             background: #667eea;
             color: white;
-            padding: 12px;
+            padding: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         table td {
-            padding: 10px;
+            padding: 6px 8px;
             border-bottom: 1px solid #eee;
         }
+        
         .chart-container {
             margin-bottom: 24px;
             width: 350px;
@@ -88,7 +99,7 @@
             color: #333;
             text-align: center;
         }
-        thead th { font-size: 1em; }
+        thead th { font-size: 0.9em; }
         td, th { text-align: center; }
         .valor-critico { background-color: #ffebee !important; color: #c62828; }
         .valor-normal { background-color: #e8f5e8 !important; color: #2e7d32; }
@@ -149,14 +160,17 @@
         </div>
     </div>
 
-    <table border="1" id="tabla">
-        <thead>
-            <tr>
-                <th>🕐 Hora</th><th>🌱 CO₂ (ppm)</th><th>🚗 Velocidad (km/h)</th><th>🌡️ Temp (°C)</th><th>🔊 dB</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <!-- Tabla más compacta con scroll -->
+    <div class="table-container">
+        <table id="tabla">
+            <thead>
+                <tr>
+                    <th>🕐 Hora</th><th>🌱 CO₂</th><th>🚗 Vel</th><th>🌡️ Temp</th><th>🔊 dB</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
     <div class="chart-container">
         <h3>🌱 CO₂ (ppm)</h3>
@@ -180,20 +194,42 @@
         let autoRefresh = true;
         let refreshInterval;
 
+        // Variables para rangos adaptativos
+        let rangosCO2 = { min: 390, max: 430 };
+        let rangosTemp = { min: 5, max: 25 };
+        let rangosVel = { min: 0, max: 10 };
+        let rangosDB = { min: 20, max: 85 };
+
         // Función para convertir UTC a hora de CDMX
         function convertirAHoraCDMX(timestampUTC) {
             const fecha = new Date(timestampUTC + ' UTC');
             const options = {
                 timeZone: 'America/Mexico_City',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hour12: false
             };
             return fecha.toLocaleString('es-MX', options);
+        }
+
+        // Función para calcular rango adaptativo
+        function calcularRangoAdaptativo(datos, rangoActual, margenPorcentaje = 0.15) {
+            if (!datos || datos.length === 0) return rangoActual;
+            
+            const min = Math.min(...datos);
+            const max = Math.max(...datos);
+            const rango = max - min;
+            const margen = Math.max(rango * margenPorcentaje, 2); // Margen mínimo de 2 unidades
+            
+            const nuevoMin = min - margen;
+            const nuevoMax = max + margen;
+            
+            // Solo expandir el rango, nunca contraer bruscamente
+            return {
+                min: Math.min(rangoActual.min, nuevoMin),
+                max: Math.max(rangoActual.max, nuevoMax)
+            };
         }
 
         // Función para clasificar valores y aplicar estilos
@@ -246,6 +282,11 @@
                 const response = await fetch('/borrar', { method: 'POST' });
                 const result = await response.json();
                 alert(result.status);
+                // Resetear rangos al borrar datos
+                rangosCO2 = { min: 390, max: 430 };
+                rangosTemp = { min: 5, max: 25 };
+                rangosVel = { min: 0, max: 10 };
+                rangosDB = { min: 20, max: 85 };
                 cargarDatos();
             }
         }
@@ -276,10 +317,11 @@
                     document.getElementById('stat-vel').textContent = Number(ultimo[2]).toFixed(1);
                     document.getElementById('stat-db').textContent = Number(ultimo[4]).toFixed(1);
 
-                    datos.reverse().forEach(row => {
+                    // Llenar tabla (solo últimos 15 registros para mantenerla compacta)
+                    datos.slice(0, 15).reverse().forEach(row => {
                         let tr = document.createElement('tr');
                         
-                        // Convertir la hora a CDMX y mostrarla
+                        // Convertir la hora a CDMX (solo HH:MM:SS)
                         const horaCDMX = convertirAHoraCDMX(row[0]);
                         
                         row.forEach((d, i) => {
@@ -289,32 +331,40 @@
                             } else {
                                 const valor = Number(d);
                                 if (i === 1) {
-                                    td.innerText = valor.toFixed(3);
+                                    td.innerText = valor.toFixed(1);
                                     td.className = clasificarValor(valor, 'co2');
                                 } else if (i === 2) {
-                                    td.innerText = valor.toFixed(2);
+                                    td.innerText = valor.toFixed(1);
                                     td.className = clasificarValor(valor, 'vel');
                                 } else if (i === 3) {
-                                    td.innerText = valor.toFixed(2);
+                                    td.innerText = valor.toFixed(1);
                                     td.className = clasificarValor(valor, 'temp');
                                 } else if (i === 4) {
-                                    td.innerText = valor.toFixed(1);
+                                    td.innerText = valor.toFixed(0);
                                     td.className = clasificarValor(valor, 'db');
                                 }
                             }
                             tr.appendChild(td);
                         });
                         tbody.appendChild(tr);
-
-                        // Solo mostrar últimas 10 lecturas en gráficas
-                        if (labels.length < 10) {
-                            labels.push(horaCDMX.split(' ')[1]);
-                            co2.push(Number(row[1]));
-                            velocidad.push(Number(row[2]));
-                            temp.push(Number(row[3]));
-                            db.push(Number(row[4]));
-                        }
                     });
+
+                    // Preparar datos para gráficas (últimos 10 puntos)
+                    datos.slice(0, 10).reverse().forEach(row => {
+                        const horaCDMX = convertirAHoraCDMX(row[0]);
+                        labels.push(horaCDMX);
+                        co2.push(Number(row[1]));
+                        velocidad.push(Number(row[2]));
+                        temp.push(Number(row[3]));
+                        db.push(Number(row[4]));
+                    });
+
+                    // Calcular rangos adaptativos
+                    rangosCO2 = calcularRangoAdaptativo(co2, rangosCO2);
+                    rangosTemp = calcularRangoAdaptativo(temp, rangosTemp);
+                    rangosVel = calcularRangoAdaptativo(velocidad, rangosVel);
+                    rangosDB = calcularRangoAdaptativo(db, rangosDB);
+
                 } else {
                     // Datos fake si no hay reales
                     document.getElementById('statsContainer').style.display = 'none';
@@ -326,11 +376,11 @@
                     db = [55, 58, 62, 56];
                 }
 
-                // Actualizar gráficas con rangos ajustados a tus datos reales
-                updateChart('co2', labels, co2, 'green', 390, 450);
-                updateChart('vel', labels, velocidad, 'blue', 0, 10);
-                updateChart('temp', labels, temp, 'red', 5, 25);  // Ajustado para tus temperaturas
-                updateChart('db', labels, db, 'orange', 45, 75);  // Ajustado para tus dB
+                // Actualizar gráficas con rangos adaptativos
+                updateChart('co2', labels, co2, 'green', rangosCO2.min, rangosCO2.max);
+                updateChart('vel', labels, velocidad, 'blue', rangosVel.min, rangosVel.max);
+                updateChart('temp', labels, temp, 'red', rangosTemp.min, rangosTemp.max);
+                updateChart('db', labels, db, 'orange', rangosDB.min, rangosDB.max);
 
                 if (showFake) tbody.innerHTML = '';
 
@@ -366,9 +416,14 @@
                     responsive: true,
                     scales: {
                         y: {
-                            min: min,
-                            max: max,
-                            grid: { color: '#f0f0f0' }
+                            min: Math.round(min * 10) / 10,
+                            max: Math.round(max * 10) / 10,
+                            grid: { color: '#f0f0f0' },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1);
+                                }
+                            }
                         },
                         x: {
                             grid: { color: '#f0f0f0' }
@@ -379,7 +434,12 @@
                         tooltip: {
                             backgroundColor: 'rgba(0,0,0,0.8)',
                             titleColor: 'white',
-                            bodyColor: 'white'
+                            bodyColor: 'white',
+                            callbacks: {
+                                label: function(context) {
+                                    return `${tipo.toUpperCase()}: ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
                         }
                     }
                 }
