@@ -137,7 +137,6 @@
     <div class="controls">
         <button onclick="toggleAutoRefresh()" id="refreshBtn">⏸️ Pausar</button>
         <button onclick="exportarDatos()">📥 Exportar CSV</button>
-        <!--> <button onclick="borrarDatos()" class="danger">🗑️ Borrar Datos</button> <-->
         <span style="margin-left: 20px;">Última actualización: <span id="lastUpdate">-</span></span>
     </div>
 
@@ -316,20 +315,6 @@
         function exportarDatos() {
             window.open('/exportar', '_blank');
         }
-
-        // async function borrarDatos() {
-        //     if (confirm('¿Estás seguro de que quieres borrar todos los datos?')) {
-        //         const response = await fetch('/borrar', { method: 'POST' });
-        //         const result = await response.json();
-        //         alert(result.status);
-        //         // Resetear rangos al borrar datos
-        //         rangosCO2 = { min: 390, max: 430 };
-        //         rangosTemp = { min: 5, max: 25 };
-        //         rangosVel = { min: 0, max: 10 };
-        //         rangosDB = { min: 20, max: 85 };
-        //         cargarDatos();
-        //     }
-        // }
 
         async function cargarDatos() {
             try {
