@@ -53,6 +53,23 @@
     <script>
         let chart_co2, chart_vel, chart_temp, chart_db;
 
+        // Función para convertir UTC a hora de CDMX
+        function convertirAHoraCDMX(timestampUTC) {
+            const fecha = new Date(timestampUTC + ' UTC');
+            // CDMX está en UTC-6 (CST) o UTC-5 (CDT) dependiendo del horario de verano
+            const options = {
+                timeZone: 'America/Mexico_City',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            return fecha.toLocaleString('es-MX', options);
+        }
+
         async function cargarDatos() {
             const res = await fetch('/ultimos');
             const datos = await res.json();
@@ -66,18 +83,21 @@
             if (datos && datos.length >= 2) {
                 datos.reverse().forEach(row => {
                     let tr = document.createElement('tr');
-                    // Muestra CO₂, velocidad, temp y dB con más decimales en la tabla
+                    
+                    // Convertir la hora a CDMX y mostrarla
+                    const horaCDMX = convertirAHoraCDMX(row[0]);
+                    
                     row.forEach((d, i) => {
                         let td = document.createElement('td');
-                        if (i === 1) td.innerText = Number(d).toFixed(3);         // CO₂ con 3 decimales
+                        if (i === 0) td.innerText = horaCDMX;                     // hora convertida a CDMX
+                        else if (i === 1) td.innerText = Number(d).toFixed(3);    // CO₂ con 3 decimales
                         else if (i > 1) td.innerText = Number(d).toFixed(2);      // otras columnas con 2 decimales
-                        else td.innerText = d;                                     // hora
                         tr.appendChild(td);
                     });
                     tbody.appendChild(tr);
 
-                    // Hora real HH:MM:SS como label en las gráficas
-                    labels.push(row[0].split(' ')[1]);
+                    // Hora real HH:MM:SS como label en las gráficas (solo la parte de tiempo)
+                    labels.push(horaCDMX.split(' ')[1]);
                     co2.push(Number(row[1]));
                     velocidad.push(Number(row[2]));
                     temp.push(Number(row[3]));
