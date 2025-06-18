@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -26,6 +27,11 @@ def recibir_datos():
     velocidad = data.get('velocidad')
     temp = data.get('temp')
     dB = data.get('dB')
+    
+    # Validar datos
+    if None in [co2, velocidad, temp, dB]:
+        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('''
@@ -34,7 +40,7 @@ def recibir_datos():
     ''', (co2, velocidad, temp, dB))
     conn.commit()
     conn.close()
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
 
 @app.route('/ultimos')
 def ultimos():
@@ -72,6 +78,37 @@ def borrar():
     conn.close()
     return jsonify({"status": "tabla sensores vaciada"})
 
+@app.route('/stats')
+def estadisticas():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+        SELECT 
+            COUNT(*) as total,
+            AVG(co2) as co2_avg,
+            MIN(co2) as co2_min,
+            MAX(co2) as co2_max,
+            AVG(temp) as temp_avg,
+            MIN(temp) as temp_min,
+            MAX(temp) as temp_max,
+            AVG(dB) as db_avg,
+            MIN(dB) as db_min,
+            MAX(dB) as db_max
+        FROM sensores 
+        WHERE timestamp >= datetime('now', '-24 hours')
+    ''')
+    stats = c.fetchone()
+    conn.close()
+    
+    if stats[0] > 0:  # Si hay datos
+        return jsonify({
+            "total_lecturas": stats[0],
+            "co2": {"avg": round(stats[1], 2), "min": round(stats[2], 2), "max": round(stats[3], 2)},
+            "temp": {"avg": round(stats[4], 2), "min": round(stats[5], 2), "max": round(stats[6], 2)},
+            "db": {"avg": round(stats[7], 2), "min": round(stats[8], 2), "max": round(stats[9], 2)}
+        })
+    else:
+        return jsonify({"message": "No hay datos en las últimas 24 horas"})
 
 @app.route('/')
 def index():

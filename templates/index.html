@@ -4,59 +4,185 @@
     <title>Monitoreo Sensores IoT</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; }
-        table { margin-bottom: 30px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+        .online { background-color: #4CAF50; }
+        .offline { background-color: #f44336; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .controls button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .controls button:hover { background: #45a049; }
+        .controls button.danger { background: #f44336; }
+        .controls button.danger:hover { background: #da190b; }
+        table { 
+            margin-bottom: 30px; 
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+        }
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
         .chart-container {
             margin-bottom: 24px;
             width: 350px;
-            height: 160px;
+            height: 200px;
             display: inline-block;
             vertical-align: top;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         canvas {
             width: 320px !important;
-            height: 120px !important;
+            height: 140px !important;
         }
-        h3 { margin-bottom: 6px; }
+        h3 { 
+            margin-bottom: 6px; 
+            color: #333;
+            text-align: center;
+        }
         thead th { font-size: 1em; }
         td, th { text-align: center; }
+        .valor-critico { background-color: #ffebee !important; color: #c62828; }
+        .valor-normal { background-color: #e8f5e8 !important; color: #2e7d32; }
+        .valor-advertencia { background-color: #fff3e0 !important; color: #ef6c00; }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <h1>Monitoreo Sensores IoT</h1>
+    <div class="header">
+        <h1>🌡️ Monitoreo Sensores IoT 📊</h1>
+        <span id="connection-status">Conectando...</span>
+        <span id="status-indicator" class="status-indicator offline"></span>
+    </div>
+
+    <div class="controls">
+        <button onclick="toggleAutoRefresh()" id="refreshBtn">⏸️ Pausar</button>
+        <button onclick="exportarDatos()">📥 Exportar CSV</button>
+        <button onclick="borrarDatos()" class="danger">🗑️ Borrar Datos</button>
+        <span style="margin-left: 20px;">Última actualización: <span id="lastUpdate">-</span></span>
+    </div>
+
+    <div class="stats" id="statsContainer" style="display: none;">
+        <div class="stat-item">
+            <div class="stat-value" id="stat-co2">-</div>
+            <div class="stat-label">CO₂ Actual (ppm)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="stat-temp">-</div>
+            <div class="stat-label">Temperatura (°C)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="stat-vel">-</div>
+            <div class="stat-label">Velocidad (km/h)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="stat-db">-</div>
+            <div class="stat-label">Ruido (dB)</div>
+        </div>
+    </div>
+
     <table border="1" id="tabla">
         <thead>
             <tr>
-                <th>Hora</th><th>CO₂</th><th>Velocidad (km/h)</th><th>Temp (°C)</th><th>dB</th>
+                <th>🕐 Hora</th><th>🌱 CO₂ (ppm)</th><th>🚗 Velocidad (km/h)</th><th>🌡️ Temp (°C)</th><th>🔊 dB</th>
             </tr>
         </thead>
         <tbody></tbody>
     </table>
 
     <div class="chart-container">
-        <h3>CO₂ (ppm)</h3>
+        <h3>🌱 CO₂ (ppm)</h3>
         <canvas id="grafica_co2"></canvas>
     </div>
     <div class="chart-container">
-        <h3>Velocidad (km/h)</h3>
+        <h3>🚗 Velocidad (km/h)</h3>
         <canvas id="grafica_vel"></canvas>
     </div>
     <div class="chart-container">
-        <h3>Temp (°C)</h3>
+        <h3>🌡️ Temperatura (°C)</h3>
         <canvas id="grafica_temp"></canvas>
     </div>
     <div class="chart-container">
-        <h3>dB</h3>
+        <h3>🔊 Nivel de Ruido (dB)</h3>
         <canvas id="grafica_db"></canvas>
     </div>
 
     <script>
         let chart_co2, chart_vel, chart_temp, chart_db;
+        let autoRefresh = true;
+        let refreshInterval;
 
         // Función para convertir UTC a hora de CDMX
         function convertirAHoraCDMX(timestampUTC) {
             const fecha = new Date(timestampUTC + ' UTC');
-            // CDMX está en UTC-6 (CST) o UTC-5 (CDT) dependiendo del horario de verano
             const options = {
                 timeZone: 'America/Mexico_City',
                 year: 'numeric',
@@ -70,107 +196,198 @@
             return fecha.toLocaleString('es-MX', options);
         }
 
-        async function cargarDatos() {
-            const res = await fetch('/ultimos');
-            const datos = await res.json();
-            const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
-            tbody.innerHTML = '';
-
-            let labels = [], co2 = [], velocidad = [], temp = [], db = [];
-            let showFake = false;
-
-            // Si hay datos reales, pinta tabla y gráficas reales
-            if (datos && datos.length >= 2) {
-                datos.reverse().forEach(row => {
-                    let tr = document.createElement('tr');
-                    
-                    // Convertir la hora a CDMX y mostrarla
-                    const horaCDMX = convertirAHoraCDMX(row[0]);
-                    
-                    row.forEach((d, i) => {
-                        let td = document.createElement('td');
-                        if (i === 0) td.innerText = horaCDMX;                     // hora convertida a CDMX
-                        else if (i === 1) td.innerText = Number(d).toFixed(3);    // CO₂ con 3 decimales
-                        else if (i > 1) td.innerText = Number(d).toFixed(2);      // otras columnas con 2 decimales
-                        tr.appendChild(td);
-                    });
-                    tbody.appendChild(tr);
-
-                    // Hora real HH:MM:SS como label en las gráficas (solo la parte de tiempo)
-                    labels.push(horaCDMX.split(' ')[1]);
-                    co2.push(Number(row[1]));
-                    velocidad.push(Number(row[2]));
-                    temp.push(Number(row[3]));
-                    db.push(Number(row[4]));
-                });
-            } else {
-                // Datos fake si no hay reales
-                showFake = true;
-                labels = ["t1","t2","t3","t4"];
-                co2 = [400, 405, 410, 402];
-                velocidad = [0, 1, 2, 1];
-                temp = [21.9, 22.5, 23, 22.8];
-                db = [-80, -40, -60, -30];
+        // Función para clasificar valores y aplicar estilos
+        function clasificarValor(valor, tipo) {
+            switch(tipo) {
+                case 'co2':
+                    if (valor > 1000) return 'valor-critico';
+                    if (valor > 600) return 'valor-advertencia';
+                    return 'valor-normal';
+                case 'temp':
+                    if (valor < 10 || valor > 35) return 'valor-critico';
+                    if (valor < 15 || valor > 30) return 'valor-advertencia';
+                    return 'valor-normal';
+                case 'db':
+                    if (valor > 85) return 'valor-critico';
+                    if (valor > 70) return 'valor-advertencia';
+                    return 'valor-normal';
+                case 'vel':
+                    if (valor > 50) return 'valor-advertencia';
+                    return 'valor-normal';
+                default:
+                    return 'valor-normal';
             }
+        }
 
-            // --- Gráfica CO₂ (más precisión) ---
-            if (chart_co2) chart_co2.destroy();
-            chart_co2 = new Chart(document.getElementById('grafica_co2'), {
-                type: 'line',
-                data: { labels: labels, datasets: [{
-                    label: 'CO₂',
-                    data: co2,
-                    borderColor: 'green',
-                    fill: false,
-                    pointRadius: 3
-                }] },
-                options: {
-                    scales: { y: { min: 390, max: 430, title: {display:true,text:"CO₂ (ppm)"}}},
-                    plugins: {
-                        legend: {display: false},
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => `CO₂: ${ctx.parsed.y.toFixed(3)} ppm`  // más precisión aquí
+        // Funciones de control
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('refreshBtn');
+            if (autoRefresh) {
+                btn.innerHTML = '⏸️ Pausar';
+                startAutoRefresh();
+            } else {
+                btn.innerHTML = '▶️ Reanudar';
+                clearInterval(refreshInterval);
+            }
+        }
+
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(cargarDatos, 3000);
+        }
+
+        function exportarDatos() {
+            window.open('/exportar', '_blank');
+        }
+
+        async function borrarDatos() {
+            if (confirm('¿Estás seguro de que quieres borrar todos los datos?')) {
+                const response = await fetch('/borrar', { method: 'POST' });
+                const result = await response.json();
+                alert(result.status);
+                cargarDatos();
+            }
+        }
+
+        async function cargarDatos() {
+            try {
+                const res = await fetch('/ultimos');
+                const datos = await res.json();
+                
+                // Actualizar indicador de conexión
+                document.getElementById('connection-status').textContent = 'Conectado';
+                document.getElementById('status-indicator').className = 'status-indicator online';
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-MX');
+
+                const tbody = document.getElementById('tabla').getElementsByTagName('tbody')[0];
+                tbody.innerHTML = '';
+
+                let labels = [], co2 = [], velocidad = [], temp = [], db = [];
+                let showFake = false;
+
+                // Si hay datos reales, pinta tabla y gráficas reales
+                if (datos && datos.length >= 2) {
+                    // Mostrar estadísticas actuales
+                    document.getElementById('statsContainer').style.display = 'flex';
+                    const ultimo = datos[0];
+                    document.getElementById('stat-co2').textContent = Number(ultimo[1]).toFixed(1);
+                    document.getElementById('stat-temp').textContent = Number(ultimo[3]).toFixed(1);
+                    document.getElementById('stat-vel').textContent = Number(ultimo[2]).toFixed(1);
+                    document.getElementById('stat-db').textContent = Number(ultimo[4]).toFixed(1);
+
+                    datos.reverse().forEach(row => {
+                        let tr = document.createElement('tr');
+                        
+                        // Convertir la hora a CDMX y mostrarla
+                        const horaCDMX = convertirAHoraCDMX(row[0]);
+                        
+                        row.forEach((d, i) => {
+                            let td = document.createElement('td');
+                            if (i === 0) {
+                                td.innerText = horaCDMX;
+                            } else {
+                                const valor = Number(d);
+                                if (i === 1) {
+                                    td.innerText = valor.toFixed(3);
+                                    td.className = clasificarValor(valor, 'co2');
+                                } else if (i === 2) {
+                                    td.innerText = valor.toFixed(2);
+                                    td.className = clasificarValor(valor, 'vel');
+                                } else if (i === 3) {
+                                    td.innerText = valor.toFixed(2);
+                                    td.className = clasificarValor(valor, 'temp');
+                                } else if (i === 4) {
+                                    td.innerText = valor.toFixed(1);
+                                    td.className = clasificarValor(valor, 'db');
+                                }
                             }
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
+
+                        // Solo mostrar últimas 10 lecturas en gráficas
+                        if (labels.length < 10) {
+                            labels.push(horaCDMX.split(' ')[1]);
+                            co2.push(Number(row[1]));
+                            velocidad.push(Number(row[2]));
+                            temp.push(Number(row[3]));
+                            db.push(Number(row[4]));
+                        }
+                    });
+                } else {
+                    // Datos fake si no hay reales
+                    document.getElementById('statsContainer').style.display = 'none';
+                    showFake = true;
+                    labels = ["12:00","12:01","12:02","12:03"];
+                    co2 = [400, 405, 410, 402];
+                    velocidad = [0, 1, 2, 1];
+                    temp = [21.9, 22.5, 23, 22.8];
+                    db = [55, 58, 62, 56];
+                }
+
+                // Actualizar gráficas con rangos ajustados a tus datos reales
+                updateChart('co2', labels, co2, 'green', 390, 450);
+                updateChart('vel', labels, velocidad, 'blue', 0, 10);
+                updateChart('temp', labels, temp, 'red', 5, 25);  // Ajustado para tus temperaturas
+                updateChart('db', labels, db, 'orange', 45, 75);  // Ajustado para tus dB
+
+                if (showFake) tbody.innerHTML = '';
+
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                document.getElementById('connection-status').textContent = 'Error de conexión';
+                document.getElementById('status-indicator').className = 'status-indicator offline';
+            }
+        }
+
+        function updateChart(tipo, labels, data, color, min, max) {
+            const canvasId = `grafica_${tipo}`;
+            const chartVar = `chart_${tipo}`;
+            
+            if (window[chartVar]) window[chartVar].destroy();
+            
+            window[chartVar] = new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: tipo.toUpperCase(),
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            min: min,
+                            max: max,
+                            grid: { color: '#f0f0f0' }
+                        },
+                        x: {
+                            grid: { color: '#f0f0f0' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white'
                         }
                     }
                 }
             });
-            // --- Velocidad ---
-            if (chart_vel) chart_vel.destroy();
-            chart_vel = new Chart(document.getElementById('grafica_vel'), {
-                type: 'line',
-                data: { labels: labels, datasets: [{label: 'Velocidad', data: velocidad, borderColor: 'blue', fill: false, pointRadius: 3}] },
-                options: {
-                    scales: { y: { min: 0, max: 10, title: {display:true,text:"Velocidad (km/h)"}}},
-                    plugins: { legend: {display: false} }
-                }
-            });
-            // --- Temp ---
-            if (chart_temp) chart_temp.destroy();
-            chart_temp = new Chart(document.getElementById('grafica_temp'), {
-                type: 'line',
-                data: { labels: labels, datasets: [{label: 'Temp', data: temp, borderColor: 'red', fill: false, pointRadius: 3}] },
-                options: {
-                    scales: { y: { min: 10, max: 40, title: {display:true,text:"Temp (°C)"}}},
-                    plugins: { legend: {display: false} }
-                }
-            });
-            // --- dB ---
-            if (chart_db) chart_db.destroy();
-            chart_db = new Chart(document.getElementById('grafica_db'), {
-                type: 'line',
-                data: { labels: labels, datasets: [{label: 'dB', data: db, borderColor: 'orange', fill: false, pointRadius: 3}] },
-                options: {
-                    scales: { y: { min: -90, max: 90, title: {display:true,text:"dB"}}},
-                    plugins: { legend: {display: false} }
-                }
-            });
-
-            // Si son datos fake, borra la tabla (sólo muestra gráficas de prueba)
-            if (showFake) tbody.innerHTML = '';
         }
-        setInterval(cargarDatos, 3000);
+
+        // Inicializar
+        startAutoRefresh();
         cargarDatos();
     </script>
 </body>
